@@ -10,29 +10,38 @@ from asteroid import Asteroid
 from asteroidfield import AsteroidField
 from shot import Shot
 from logger import log_state, log_event
-import sys
 
-
-def main():
-    pygame.init()
-    print("Starting Asteroids!")
-
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Asteroids")
-    clock = pygame.time.Clock()
-    dt = 0
-
+def new_game():
     updatable = pygame.sprite.Group()
     drawable = pygame.sprite.Group()
     asteroids = pygame.sprite.Group()
     shots = pygame.sprite.Group()
+
     Player.containers = (updatable, drawable)
     Asteroid.containers = (asteroids, updatable, drawable)
-    AsteroidField.containers = (updatable)
+    AsteroidField.containers = (updatable,)
     Shot.containers = (shots, updatable, drawable)
 
     player = Player(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
     asteroid_field = AsteroidField()
+    return updatable, drawable, asteroids, shots, player, asteroid_field
+
+def draw_text(surf, msg, size, color, y):
+    font = pygame.font.SysFont(None, size)
+    img = font.render(msg, True, color)
+    rect = img.get_rect(center=(surf.get_width() // 2, y))
+    surf.blit(img, rect)
+
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    pygame.display.set_caption("Asteroids")
+    clock = pygame.time.Clock()
+    
+    updatable, drawable, asteroids, shots, player, _ = new_game()
+    state = "play"
+    dt = 0
+
 
     while True:
         log_state()
@@ -40,26 +49,35 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
+            if state == "gameover" and event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    updatable, drawable, asteroids, shots, player, _ = new_game()
+                    state = "play"
+                if event.key == pygame.K_q:
+                    return
 
         screen.fill("black")
 
-        updatable.update(dt)
+        if state == "play":
+            updatable.update(dt)
 
-        for asteroid in asteroids:
-            if asteroid.collides_with(player):
-                log_event("player_hit")
-                print("Game over!")
-                sys.exit()
+            for asteroid in asteroids:
+                if asteroid.collides_with(player):
+                    log_event("player_hit")
+                    state = "gameover"
 
-        for asteroid in asteroids:
-            for shot in shots:
-                if shot.collides_with(asteroid):
-                    log_event("asteroid_shot")
-                    shot.kill()
-                    asteroid.split()
+            for asteroid in asteroids:
+                for shot in shots:
+                    if shot.collides_with(asteroid):
+                        log_event("asteroid_shot")
+                        shot.kill()
+                        asteroid.split()
 
-        for item in drawable:
-            item.draw(screen)
+            for item in drawable:
+                item.draw(screen)
+        else:
+            draw_text(screen, "YOU DIED", 72, (255, 70, 70), screen.get_height() // 2 - 40)
+            draw_text(screen, "R = Restart Q = Quit", 28, (200, 200, 200), screen.get_height() // 2 + 20)
 
         pygame.display.flip()
         dt = clock.tick(60) / 1000
