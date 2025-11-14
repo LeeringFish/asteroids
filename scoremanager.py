@@ -20,3 +20,7 @@ class ScoreManager():
                     return 0
         else:
             return 0
+        
+    def write_high_score(self):
+        with open(self.FILENAME, "w") as file:
+            file.write(f"{self.high_score}")
